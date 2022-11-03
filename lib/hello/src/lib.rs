@@ -1,10 +1,19 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
+
+extern "C" {
+    fn MyGoPrint(input: *const libc::c_char);
+}
 
 #[no_mangle]
 pub extern "C" fn hello(name: *const libc::c_char) {
     let name_cstr = unsafe { CStr::from_ptr(name) };
     let name = name_cstr.to_str().unwrap();
     println!("Hello {}!", name);
+
+    unsafe {
+        let to_print = CString::new("Hello ".to_owned() + name + "! again from Go").unwrap();
+        MyGoPrint(to_print.as_ptr());
+    }
 }
 
 #[no_mangle]

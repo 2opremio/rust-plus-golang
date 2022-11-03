@@ -8,6 +8,12 @@ package main
 #include "./lib/hello.h"
 */
 import "C"
+import "fmt"
+
+//export MyGoPrint
+func MyGoPrint(str *C.char) {
+	fmt.Println(C.GoString(str))
+}
 
 func main() {
 	C.hello(C.CString("world"))

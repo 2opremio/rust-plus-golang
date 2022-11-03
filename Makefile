@@ -18,6 +18,7 @@ build-dynamic:
 build-static:
 	@cd lib/hello && cargo build --release
 	@cp lib/hello/target/release/libhello.a lib/
+	rm -f main_static
 	go build main_static.go
 
 .PHONY: run-dynamic
