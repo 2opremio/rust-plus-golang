@@ -17,6 +17,8 @@ extern "C" {
     fn SnapshotSourceGet(ledger_key: *const libc::c_char) -> *const libc::c_char;
     // LedgerKey XDR in base64 string to bool
     fn SnapshotSourceHas(ledger_key: *const libc::c_char) -> libc::c_int;
+    // Free Strings provided by Go
+    fn FreeCString(str: *const libc::c_char);
 }
 
 struct CSnapshotSource;
@@ -32,10 +34,11 @@ impl SnapshotSource for CSnapshotSource {
             ));
         }
         let res_cstr = unsafe { CStr::from_ptr(res) };
-        let res = res_cstr.to_str().unwrap();
+        let res_str = res_cstr.to_str().unwrap();
         // TODO: use a proper error
         let entry =
-            LedgerEntry::from_xdr_base64(res).map_err(|_| ScHostStorageErrorCode::UnknownError)?;
+            LedgerEntry::from_xdr_base64(res_str).map_err(|_| ScHostStorageErrorCode::UnknownError)?;
+        unsafe { FreeCString(res)};
         Ok(entry)
     }
 
@@ -150,6 +153,6 @@ pub extern "C" fn preflight_host_function(
 }
 
 #[no_mangle]
-pub extern "C" fn free_cstring(str: *mut libc::c_char) {
+pub extern "C" fn free_rust_cstring(str: *mut libc::c_char) {
     unsafe { let _ = CString::from_raw(str);}
 }

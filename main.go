@@ -6,11 +6,13 @@ package main
 /*
 #cgo LDFLAGS: ./lib/libpreflight.a -ldl
 #include "./lib/preflight.h"
+#include <stdlib.h>
 */
 import "C"
 import (
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/hexops/valast"
 	"github.com/stellar/go/xdr"
@@ -89,6 +91,11 @@ func SnapshotSourceHas(ledger_key *C.char) C.int {
 	return 0
 }
 
+//export FreeCString
+func FreeCString(str *C.char) {
+	C.free(unsafe.Pointer(str))
+}
+
 func main() {
 	hf := xdr.HostFunctionHostFnInvokeContract
 
@@ -129,16 +136,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	argsCString := C.CString(argsB64)
+	sourceAccountCString := C.CString(sourceAccountB64)
 	res := C.preflight_host_function(C.CString(hfB64),
-		C.CString(argsB64),
-		C.CString(sourceAccountB64),
+		argsCString,
+		sourceAccountCString,
 		li,
 	)
+	C.free(unsafe.Pointer(argsCString))
+	C.free(unsafe.Pointer(sourceAccountCString))
 
 	if res == nil {
 		fmt.Println("preflight failed :(")
 	}
-	defer C.free_cstring(res)
+	defer C.free_rust_cstring(res)
 
 	var preflight xdr.LedgerFootprint
 	preflightB64 := C.GoString(res)

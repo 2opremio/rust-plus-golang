@@ -19,9 +19,10 @@ char *preflight_host_function(const char *hf, // HostFunction XDR in base64
 // LedgerKey XDR in base64 string to LedgerEntry XDR in base64 string
 extern char *SnapshotSourceGet(char *ledger_key);
 
-    // LedgerKey XDR in base64 string to bool
+// LedgerKey XDR in base64 string to bool
 extern int SnapshotSourceHas(char *ledger_key);
 
-void free_cstring(const char *str);
+void free_rust_cstring(const char *str);
 
+extern void FreeCString(char *str);
 
