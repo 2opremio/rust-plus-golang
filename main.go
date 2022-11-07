@@ -4,7 +4,8 @@ package main
 // The -ldl is sometimes necessary to fix linker errors about `dlsym`.
 
 /*
-#cgo LDFLAGS: ./lib/libpreflight.a -ldl
+#cgo darwin linux LDFLAGS: ./lib/preflight/target/release/libpreflight.a -ldl
+#cgo windows LDFLAGS: ./lib/preflight/target/release/libpreflight.a
 #include "./lib/preflight.h"
 #include <stdlib.h>
 */
@@ -18,8 +19,8 @@ import (
 	"github.com/stellar/go/xdr"
 )
 
-// test contract ID and source accounts
-// we assume the increment contract in the soroban-examples repo to be used
+// Test contract ID and source accounts
+// We will be using increment contract in the soroban-examples repo
 // https://github.com/stellar/soroban-examples/blob/main/increment/src/lib.rs
 var (
 	contractID            = xdr.Hash{0xaa, 0xbb}

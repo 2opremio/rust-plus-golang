@@ -17,7 +17,7 @@ extern "C" {
     fn SnapshotSourceGet(ledger_key: *const libc::c_char) -> *const libc::c_char;
     // LedgerKey XDR in base64 string to bool
     fn SnapshotSourceHas(ledger_key: *const libc::c_char) -> libc::c_int;
-    // Free Strings provided by Go
+    // Free Strings returned from Go functions
     fn FreeCString(str: *const libc::c_char);
 }
 
