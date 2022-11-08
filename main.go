@@ -5,7 +5,7 @@ package main
 
 /*
 #cgo darwin linux LDFLAGS: ./lib/preflight/target/release/libpreflight.a -ldl -lm
-#cgo windows LDFLAGS: ./lib/preflight/target/release/libpreflight.lib -lm
+#cgo windows LDFLAGS: ./lib/preflight/target/release/preflight.lib -lm
 #include "./lib/preflight.h"
 #include <stdlib.h>
 */
