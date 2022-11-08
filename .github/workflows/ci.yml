@@ -43,5 +43,5 @@ jobs:
       # show the executable size and file type
       - run: ls -lh main && file main
       # We can run it in all platforms except arm, which is cross-compiled
-      - if: ${{ matrix.go_arch }} != arm64
+      - if: matrix.go_arch != "arm64"
         run: ./main
