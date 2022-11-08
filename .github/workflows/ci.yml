@@ -37,4 +37,9 @@ jobs:
       - uses: actions/setup-go@v3
       - run: rustup update
       - run: rustup target add ${{ matrix.rust_target }}
-      - run: CGO_ENABLED=1 CARGO_BUILD_TARGET=${{ matrix.rust_target }} GOARCH=${{ matrix.go_arch }} make
+      - run: CGO_ENABLED=1 CARGO_BUILD_TARGET=${{ matrix.rust_target }} GOARCH=${{ matrix.go_arch }} make main
+      # show the executable size
+      - run: ls -lh main
+      # We can run it in all platforms except arm, which is cross-compiled
+      - if: ${{ matrix.go_arch }} != arm64
+        run: ./main

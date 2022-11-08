@@ -12,12 +12,21 @@ export CGO_LDFLAGS=./lib/preflight/target/${CARGO_BUILD_TARGET}/release/libprefl
 endif
 
 .PHONY: all
-all:
-	cd lib/preflight && cargo build --release
-	rm -f main
-	go build main.go
-	ls -lh main
+all: main
 	./main
+
+lib/preflight/target/${CARGO_BUILD_TARGET}/release/libpreflight.a: lib/preflight.h lib/preflight/Cargo.toml lib/preflight/src/lib.rs
+	cd lib/preflight && cargo build --release
+
+main: ./lib/preflight/target/${CARGO_BUILD_TARGET}/release/libpreflight.a lib/preflight.h
+	go build main.go
+
+.PHONY: clean
+clean:
+	rm -r main lib/preflight/target
+
+
+
 
 
 
