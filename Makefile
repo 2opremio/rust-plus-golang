@@ -1,6 +1,6 @@
 
 ifndef CARGO_BUILD_TARGET
-
+export CARGO_BUILD_TARGET=$(shell rustc -vV | sed -n 's|host: ||p')
 endif
 
 ifeq ($(OS),Windows_NT)
