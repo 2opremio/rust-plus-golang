@@ -17,19 +17,24 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            rust_target: x86_64-unknown-linux-gnu
+            go_arch: amd64
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
+            rust_target: aarch64-unknown-linux-gnu
+            go_arch: arm64
           - os: macos-latest
-            target: x86_64-apple-darwin
+            rust_target: x86_64-apple-darwin
+            go_arch: amd64
           - os: macos-latest
-            target: aarch64-apple-darwin
+            rust_target: aarch64-apple-darwin
+            go_arch: arm64
           - os: windows-latest
-            target: x86_64-pc-windows-msvc
+            rust_target: x86_64-pc-windows-gnu
+            go_arch: amd64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
       - run: rustup update
-      - run: rustup target add ${{ matrix.target }}
-      - run: make
+      - run: rustup target add ${{ matrix.rust_target }}
+      - run: CARGO_BUILD_TARGET=${{ matrix.rust_target }} GOARCH=${{ matrix.go_arch }} make
