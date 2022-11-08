@@ -19,9 +19,11 @@ jobs:
           - os: ubuntu-latest
             rust_target: x86_64-unknown-linux-gnu
             go_arch: amd64
-          - os: ubuntu-latest
-            rust_target: aarch64-unknown-linux-gnu
-            go_arch: arm64
+          # TODO: fix Linux ARM cross-compilation
+          #       last failure seen at https://github.com/2opremio/rust-plus-golang/actions/runs/3422673800/jobs/5700353279
+          #- os: ubuntu-latest
+          #  rust_target: aarch64-unknown-linux-gnu
+          #  go_arch: arm64
           - os: macos-latest
             rust_target: x86_64-apple-darwin
             go_arch: amd64
