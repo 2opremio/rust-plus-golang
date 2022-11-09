@@ -45,8 +45,8 @@ jobs:
           sudo apt-get install -y gcc-12-aarch64-linux-gnu
           echo 'CC=aarch64-linux-gnu-gcc-12' >> $GITHUB_ENV
       - run: CGO_ENABLED=1 CARGO_BUILD_TARGET=${{ matrix.rust_target }} GOARCH=${{ matrix.go_arch }} make main
-      # Show the executable size and file type
-      - run: ls -lh main && file main
+      # Show the executable size, file type and linked libraries
+      - run: ls -lh main && file main && ldd main
       # We can run it in all platforms except arm, which is cross-compiled
       - if: matrix.go_arch != 'arm64'
         run: ./main
