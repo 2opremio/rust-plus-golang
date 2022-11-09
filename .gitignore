@@ -1,2 +1,3 @@
-main_dynamic
-main_static
+main
+.DS_Store
+.idea

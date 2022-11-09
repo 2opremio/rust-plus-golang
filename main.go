@@ -4,8 +4,6 @@ package main
 // The -ldl is sometimes necessary to fix linker errors about `dlsym`.
 
 /*
-#cgo darwin linux LDFLAGS: ./lib/preflight/target/release/libpreflight.a -ldl
-#cgo windows LDFLAGS: ./lib/preflight/target/release/libpreflight.a
 #include "./lib/preflight.h"
 #include <stdlib.h>
 */
