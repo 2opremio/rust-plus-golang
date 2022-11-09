@@ -6,10 +6,16 @@ endif
 ifeq ($(OS),Windows_NT)
 # This assumes that the Rust compiler should be using a -gnu target (i.e. MinGW compiler) in Windows
 # (I (fons) am not even sure if CGo supports MSVC, see https://github.com/golang/go/issues/20982 )
-export CGO_LDFLAGS=./lib/preflight/target/${CARGO_BUILD_TARGET}/release/libpreflight.a -static -ldl -lm -lws2_32 -lbcrypt -luserenv
+ARCH_LDFLAGS=-static -lws2_32 -lbcrypt -luserenv
 else
-export CGO_LDFLAGS=./lib/preflight/target/${CARGO_BUILD_TARGET}/release/libpreflight.a -static -ldl -lm
+	UNAME_S := $(shell uname -s)
+	# you cannot compile with -static in macos
+	ifneq ($(UNAME_S),Darwin)
+		ARCH_LDFLAGS=-static
+	endif
 endif
+
+export CGO_LDFLAGS=./lib/preflight/target/${CARGO_BUILD_TARGET}/release/libpreflight.a -ldl -lm ${ARCH_LDFLAGS}
 
 .PHONY: all
 all: main
