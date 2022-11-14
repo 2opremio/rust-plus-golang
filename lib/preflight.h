@@ -11,10 +11,18 @@ typedef struct CLedgerInfo {
   uint32_t base_reserve;
 } CLedgerInfo;
 
-char *preflight_host_function(const char *hf, // HostFunction XDR in base64
-                              const char *args, // ScVec XDR in base64
-                              const char *source_account, // AccountId XDR in base64
-                              const struct CLedgerInfo ledger_info);
+typedef struct CPreflightResult {
+    char *error;
+    char *result;
+    char *preflight;
+    uint64_t cpu_instructions;
+    uint64_t memory_bytes;
+} CPreflightResult;
+
+CPreflightResult *preflight_host_function(const char *hf, // HostFunction XDR in base64
+                                          const char *args, // ScVec XDR in base64
+                                          const char *source_account, // AccountId XDR in base64
+                                          const struct CLedgerInfo ledger_info);
 
 // LedgerKey XDR in base64 string to LedgerEntry XDR in base64 string
 extern char *SnapshotSourceGet(char *ledger_key);
@@ -22,7 +30,7 @@ extern char *SnapshotSourceGet(char *ledger_key);
 // LedgerKey XDR in base64 string to bool
 extern int SnapshotSourceHas(char *ledger_key);
 
-void free_rust_cstring(const char *str);
+void free_preflight_result(CPreflightResult *result);
 
-extern void FreeCString(char *str);
+extern void FreeGoCString(char *str);
 

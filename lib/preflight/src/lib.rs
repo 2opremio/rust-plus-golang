@@ -18,7 +18,7 @@ extern "C" {
     // LedgerKey XDR in base64 string to bool
     fn SnapshotSourceHas(ledger_key: *const libc::c_char) -> libc::c_int;
     // Free Strings returned from Go functions
-    fn FreeCString(str: *const libc::c_char);
+    fn FreeGoCString(str: *const libc::c_char);
 }
 
 struct CSnapshotSource;
@@ -38,7 +38,7 @@ impl SnapshotSource for CSnapshotSource {
         // TODO: use a proper error
         let entry =
             LedgerEntry::from_xdr_base64(res_str).map_err(|_| ScHostStorageErrorCode::UnknownError)?;
-        unsafe { FreeCString(res)};
+        unsafe { FreeGoCString(res)};
         Ok(entry)
     }
 
@@ -93,6 +93,27 @@ fn storage_footprint_to_ledger_footprint(
     })
 }
 
+#[repr(C)]
+pub struct CPreflightResult {
+    pub error: *mut libc::c_char, // Error string in case of error, otherwise null
+    pub result: *mut libc::c_char, // SCVal XDR in base64
+    pub footprint: *mut libc::c_char, // LedgerFootprint XDR in base64
+    pub cpu_instructions: u64,
+    pub memory_bytes: u64,
+}
+
+fn preflight_error(str: String) -> *mut CPreflightResult {
+    let c_str = CString::new(str).unwrap();
+    // transfer ownership to caller
+    // caller needs to invoke free_preflight_result(result) when done
+    Box::into_raw(Box::new(CPreflightResult{
+        error: c_str.into_raw(),
+        result: null_mut(),
+        footprint: null_mut(),
+        cpu_instructions: 0,
+        memory_bytes: 0,
+    }))
+}
 
 #[no_mangle]
 pub extern "C" fn preflight_host_function(
@@ -100,15 +121,24 @@ pub extern "C" fn preflight_host_function(
     args: *const libc::c_char, // ScVec XDR in base64
     source_account: *const libc::c_char, // AccountId XDR in base64
     ledger_info: CLedgerInfo,
-) -> *mut libc::c_char // LedgerFootprint XDR in base64, TODO: use better error reporting
+) -> *mut CPreflightResult
 {
     let hf_cstr = unsafe { CStr::from_ptr(hf) };
     // TODO: remove _all_ the unwraps() around XDR decoding
-    let hf = HostFunction::from_xdr_base64(hf_cstr.to_str().unwrap()).unwrap();
+    let hf = match HostFunction::from_xdr_base64(hf_cstr.to_str().unwrap()) {
+        Ok(hf) => hf,
+        Err(err) => return preflight_error(format!("decoding host function: {}", err)),
+    };
     let args_cstr = unsafe { CStr::from_ptr(args) };
-    let args = ScVec::from_xdr_base64(args_cstr.to_str().unwrap()).unwrap();
+    let args = match ScVec::from_xdr_base64(args_cstr.to_str().unwrap()) {
+        Ok(args) => args,
+        Err(err) => return preflight_error(format!("decoding args: {}", err)),
+    };
     let source_account_cstr = unsafe { CStr::from_ptr(source_account) };
-    let source_account = AccountId::from_xdr_base64(source_account_cstr.to_str().unwrap()).unwrap();
+    let source_account = match AccountId::from_xdr_base64(source_account_cstr.to_str().unwrap()){
+        Ok(account_id) => account_id,
+        Err(err) => return preflight_error(format!("decoding account_id: {}", err)),
+    };
     let src = Rc::new(CSnapshotSource);
     let storage = Storage::with_recording_footprint(src);
     let budget = Budget::default();
@@ -117,42 +147,56 @@ pub extern "C" fn preflight_host_function(
     host.set_source_account(source_account);
     host.set_ledger_info(ledger_info.into());
 
-    println!(
-        "preflight execution of host function '{}'",
-        HostFunction::name(&hf)
-    );
-
     // Run the preflight.
     let res = host.invoke_function(hf, args);
 
     // Recover, convert and return the storage footprint and other values to C.
-    let (storage, _, _) = match host.try_finish() {
+    let (storage, budget, _) = match host.try_finish() {
         Ok(v) => v,
-        Err(_) => {
-            println!("finish failed");
-            return null_mut();
+        Err(err) => {
+            return preflight_error(format!("{:?}", err));
         }
     };
 
-    if let Err(err) = res {
-        println!("preflight failed: {}", err);
-        return null_mut();
+    let result = match res {
+        Ok(val) => val,
+        Err(err) => return preflight_error(err.to_string()),
     };
 
     let fp = match storage_footprint_to_ledger_footprint(&storage.footprint) {
         Ok(fp) => fp,
         Err(err) => {
-            println!("footprint conversion failed: {}", err);
-            return null_mut();
+            return preflight_error(err.to_string());
         }
     };
-    let result =  CString::new(fp.to_xdr_base64().unwrap()).unwrap();
+    let fp_cstr =  CString::new(fp.to_xdr_base64().unwrap()).unwrap();
+    let result_cstr = CString::new(result.to_xdr_base64().unwrap()).unwrap();
     // transfer ownership to caller
-    // caller needs to invoke free_cstring(result) when done
-    result.into_raw()
+    // caller needs to invoke free_preflight_result(result) when done
+    Box::into_raw(Box::new(CPreflightResult{
+        error: null_mut(),
+        result: result_cstr.into_raw(),
+        footprint: fp_cstr.into_raw(),
+        cpu_instructions: budget.get_cpu_insns_count(),
+        memory_bytes: budget.get_mem_bytes_count(),
+    }))
 }
 
 #[no_mangle]
-pub extern "C" fn free_rust_cstring(str: *mut libc::c_char) {
-    unsafe { let _ = CString::from_raw(str);}
+pub extern "C" fn free_preflight_result(result: *mut CPreflightResult) {
+    if result.is_null() {
+        return;
+    }
+    unsafe {
+        if !(*result).error.is_null() {
+            let _ = CString::from_raw((*result).error);
+        }
+        if !(*result).result.is_null() {
+            let _ = CString::from_raw((*result).result);
+        }
+        if !(*result).footprint.is_null() {
+            let _ = CString::from_raw((*result).footprint);
+        }
+        let _ = Box::from_raw(result);
+    }
 }
