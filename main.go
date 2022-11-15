@@ -90,8 +90,8 @@ func SnapshotSourceHas(ledger_key *C.char) C.int {
 	return 0
 }
 
-//export FreeCString
-func FreeCString(str *C.char) {
+//export FreeGoCString
+func FreeGoCString(str *C.char) {
 	C.free(unsafe.Pointer(str))
 }
 
@@ -144,17 +144,27 @@ func main() {
 	)
 	C.free(unsafe.Pointer(argsCString))
 	C.free(unsafe.Pointer(sourceAccountCString))
+	defer C.free_preflight_result(res)
 
-	if res == nil {
-		fmt.Println("preflight failed :(")
+	if res.error != nil {
+		fmt.Println("preflight failed:%s\n", C.GoString(res.error))
 	}
-	defer C.free_rust_cstring(res)
 
 	var preflight xdr.LedgerFootprint
-	preflightB64 := C.GoString(res)
+	preflightB64 := C.GoString(res.preflight)
 	if err := xdr.SafeUnmarshalBase64(preflightB64, &preflight); err != nil {
 		panic(err)
 	}
 
 	fmt.Printf("Obtained preflight: %s\n", valast.String(preflight))
+
+	var result xdr.ScVal
+	resultB64 := C.GoString(res.result)
+	if err := xdr.SafeUnmarshalBase64(resultB64, &result); err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Obtained result: %s\n", valast.String(result))
+	fmt.Printf("Obtained CPU instruction budget: %d instructions\n", res.cpu_instructions)
+	fmt.Printf("Obtained memory budget: %d bytes\n", res.memory_bytes)
 }
